@@ -1,0 +1,37 @@
+package templates
+
+import (
+    "myapp/server/config"
+)
+
+templ IndexPage(cfg *config.Config) {
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <title>My HTMX App</title>
+        <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+        <link href="/static/css/styles.css" rel="stylesheet"/>
+    </head>
+    <body class="bg-gray-100">
+        <div class="container mx-auto px-4 py-8">
+            <h1 class="text-3xl font-bold mb-6">My HTMX App</h1>
+            
+            <div class="mb-6">
+                <button 
+                    hx-get="/api/hello" 
+                    hx-target="#response"
+                    class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                >
+                    Click Me!
+                </button>
+            </div>
+
+            <div id="response" class="p-4 border rounded bg-white">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+        </div>
+    </body>
+    </html>
+}

@@ -1,0 +1,24 @@
+# Binaries
+myapp
+*.exe
+
+# Git
+.git
+.gitignore
+
+# Documentation
+README.md
+AGENTS.md
+
+# Development files
+.envrc
+flake.nix
+flake.lock
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Build artifacts
+*.log
