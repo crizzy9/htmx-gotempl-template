@@ -12,6 +12,51 @@ A minimal template for building web applications with Go, HTMX, and Templ templa
 - **Docker Support**: Multi-stage build with health checks
 - **Development Tools**: Makefile with common tasks
 
+## Template Setup
+
+### Automated Setup Script
+
+After cloning this template, use the included setup script to rename everything to your new application:
+
+```bash
+# Interactive mode (prompts for input)
+./setup.sh
+
+# Or provide arguments directly
+./setup.sh -a my-todo-app -u johndoe -r todo-app
+```
+
+The script will:
+- Update the Go module name and all import paths
+- Rename application references in Makefile
+- Update repository URLs in all configuration files
+- Clean and regenerate templates
+- Update Go dependencies
+- Remove itself after completion
+
+### Manual Setup (Alternative)
+
+If you prefer manual setup, you can also use these commands:
+
+```bash
+# Set your new app name and repository URL
+NEW_APP_NAME="my-new-app"
+NEW_REPO_USER="yourusername"  
+NEW_REPO_NAME="your-repo-name"
+
+# Update Go module and imports
+go mod edit -module "github.com/$NEW_REPO_USER/$NEW_REPO_NAME"
+find . -name "*.go" -exec sed -i "s|myapp|github.com/$NEW_REPO_USER/$NEW_REPO_NAME|g" {} \;
+
+# Update application name and repository references
+sed -i "s/APP_NAME = myapp/APP_NAME = $NEW_APP_NAME/g" Makefile
+sed -i "s/htmx-gotempl-template/$NEW_REPO_NAME/g" README.md flake.nix nixos-example.nix
+sed -i "s/github.com\/example\/htmx-gotempl-template/github.com\/$NEW_REPO_USER\/$NEW_REPO_NAME/g" flake.nix
+
+# Clean up and regenerate
+make clean && make templ-generate && go mod tidy
+```
+
 ## Quick Start
 
 ### Option 1: Local Development
@@ -22,9 +67,7 @@ A minimal template for building web applications with Go, HTMX, and Templ templa
    cp -r htmx-gotempl-template my-new-app
    cd my-new-app
    
-   # Update module name
-   go mod edit -module my-new-app
-   # Update import paths in all Go files from "myapp" to "my-new-app"
+   # Follow the "Template Setup" section above to rename everything
    ```
 
 2. **Install dependencies**:
@@ -48,9 +91,7 @@ A minimal template for building web applications with Go, HTMX, and Templ templa
    cp -r htmx-gotempl-template my-new-app
    cd my-new-app
    
-   # Update module name
-   go mod edit -module my-new-app
-   # Update import paths in all Go files from "myapp" to "my-new-app"
+   # Follow the "Template Setup" section above to rename everything
    ```
 
 2. **Run with Docker**:
@@ -455,13 +496,7 @@ func (h *Handlers) SearchHandler(w http.ResponseWriter, r *http.Request) {
 
 ### 1. Update Module Name
 
-```bash
-# Change module name
-go mod edit -module github.com/youruser/your-app-name
-
-# Update imports in Go files
-find . -name "*.go" -exec sed -i 's/myapp/github.com\/youruser\/your-app-name/g' {} \;
-```
+See the "Template Setup" section at the beginning of this README for complete renaming commands.
 
 ### 2. Add New Routes and Handlers
 
