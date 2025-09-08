@@ -23,16 +23,21 @@ After cloning this template, use the included setup script to rename everything 
 ./setup.sh
 
 # Or provide arguments directly
-./setup.sh -a my-todo-app -u johndoe -r todo-app
+./setup.sh -a my-todo-app -m github.com/johndoe/my-todo-app
+./setup.sh -a my-local-app -m my-local-app
 ```
 
 The script will:
 - Update the Go module name and all import paths
-- Rename application references in Makefile
-- Update repository URLs in all configuration files
+- Rename application references in Makefile and .gitignore
+- Update flake.nix description and homepage
 - Clean and regenerate templates
 - Update Go dependencies
 - Remove itself after completion
+
+**Module options:**
+- Remote repository: `github.com/username/repo`, `gitlab.com/user/repo`, etc.
+- Local/simple module: Just the app name like `my-app`
 
 ### Manual Setup (Alternative)
 

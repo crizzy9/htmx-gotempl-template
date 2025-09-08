@@ -30,26 +30,25 @@ print_error() {
 show_usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Setup script to rename the HTMX Go Template application and repository references."
+    echo "Setup script to rename the HTMX Go Template application and clean up template-specific files."
     echo ""
     echo "Options:"
     echo "  -a, --app-name APP_NAME       New application name (e.g., 'my-todo-app')"
-    echo "  -u, --repo-user USER          GitHub username/organization (e.g., 'johndoe')"
-    echo "  -r, --repo-name REPO_NAME     Repository name (e.g., 'todo-app')"
+    echo "  -m, --module MODULE_PATH      Go module path (e.g., 'github.com/user/repo' or 'my-app')"
     echo "  -h, --help                    Show this help message"
     echo ""
     echo "Interactive mode:"
     echo "  $0                            Run without arguments for interactive prompts"
     echo ""
-    echo "Example:"
-    echo "  $0 -a my-todo-app -u johndoe -r todo-app"
+    echo "Examples:"
+    echo "  $0 -a my-todo-app -m github.com/johndoe/todo-app"
+    echo "  $0 -a my-app -m my-local-app"
     echo ""
 }
 
 # Parse command line arguments
 APP_NAME=""
-REPO_USER=""
-REPO_NAME=""
+MODULE_PATH=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -57,12 +56,8 @@ while [[ $# -gt 0 ]]; do
             APP_NAME="$2"
             shift 2
             ;;
-        -u|--repo-user)
-            REPO_USER="$2"
-            shift 2
-            ;;
-        -r|--repo-name)
-            REPO_NAME="$2"
+        -m|--module)
+            MODULE_PATH="$2"
             shift 2
             ;;
         -h|--help)
@@ -83,18 +78,38 @@ if [[ -z "$APP_NAME" ]]; then
     read -r APP_NAME
 fi
 
-if [[ -z "$REPO_USER" ]]; then
-    echo -n "Enter your GitHub username/organization (e.g., 'johndoe'): "
-    read -r REPO_USER
-fi
-
-if [[ -z "$REPO_NAME" ]]; then
-    echo -n "Enter your repository name (e.g., 'todo-app'): "
-    read -r REPO_NAME
+if [[ -z "$MODULE_PATH" ]]; then
+    echo ""
+    echo "Choose module structure:"
+    echo "  1. Remote repository (e.g., github.com/username/repo)"
+    echo "  2. Local/simple module (e.g., my-app)"
+    echo ""
+    echo -n "Enter choice (1 or 2): "
+    read -r choice
+    
+    case $choice in
+        1)
+            echo -n "Enter git hosting service (github.com, gitlab.com, etc.): "
+            read -r git_host
+            echo -n "Enter username/organization: "
+            read -r repo_user
+            echo -n "Enter repository name: "
+            read -r repo_name
+            MODULE_PATH="$git_host/$repo_user/$repo_name"
+            ;;
+        2)
+            echo -n "Enter simple module name (e.g., 'my-app'): "
+            read -r MODULE_PATH
+            ;;
+        *)
+            print_error "Invalid choice. Please enter 1 or 2."
+            exit 1
+            ;;
+    esac
 fi
 
 # Validate inputs
-if [[ -z "$APP_NAME" || -z "$REPO_USER" || -z "$REPO_NAME" ]]; then
+if [[ -z "$APP_NAME" || -z "$MODULE_PATH" ]]; then
     print_error "All parameters are required!"
     show_usage
     exit 1
@@ -119,9 +134,7 @@ fi
 
 print_info "Setting up project with the following configuration:"
 echo "  Application name: $APP_NAME"
-echo "  Repository user:  $REPO_USER"
-echo "  Repository name:  $REPO_NAME"
-echo "  Full module path: github.com/$REPO_USER/$REPO_NAME"
+echo "  Module path:      $MODULE_PATH"
 echo ""
 
 echo -n "Continue? (y/N): "
@@ -135,32 +148,37 @@ print_info "Starting project setup..."
 
 # 1. Update Go module
 print_info "Updating Go module name..."
-go mod edit -module "github.com/$REPO_USER/$REPO_NAME"
+go mod edit -module "$MODULE_PATH"
 
 # 2. Update all Go import paths
 print_info "Updating Go import paths..."
 if command -v rg >/dev/null 2>&1; then
     # Use ripgrep if available (faster)
-    rg -l "myapp" --type go | xargs sed -i "s|myapp|github.com/$REPO_USER/$REPO_NAME|g"
+    rg -l "myapp" --type go | xargs sed -i "s|myapp|$MODULE_PATH|g"
 else
     # Fallback to find and grep
-    find . -name "*.go" -exec sed -i "s|myapp|github.com/$REPO_USER/$REPO_NAME|g" {} \;
+    find . -name "*.go" -exec sed -i "s|myapp|$MODULE_PATH|g" {} \;
 fi
 
 # 3. Update Makefile app name
 print_info "Updating Makefile..."
 sed -i "s/APP_NAME = myapp/APP_NAME = $APP_NAME/g" Makefile
 
-# 4. Update repository references
-print_info "Updating repository references..."
-sed -i "s/htmx-gotempl-template/$REPO_NAME/g" README.md flake.nix nixos-example.nix
-sed -i "s|github.com/example/htmx-gotempl-template|github.com/$REPO_USER/$REPO_NAME|g" flake.nix
+# 4. Update .gitignore binary name
+print_info "Updating .gitignore..."
+sed -i "s/^myapp$/$APP_NAME/g" .gitignore
 
-# 5. Update flake description
-print_info "Updating flake description..."
-sed -i "s/description = \"A minimal template for building web applications with Go, HTMX, and Templ templates\";/description = \"$APP_NAME - Built with Go, HTMX, and Templ templates\";/" flake.nix
+# 5. Update repository references in flake.nix and other config files
+if [[ -f "flake.nix" ]]; then
+    print_info "Updating flake.nix..."
+    sed -i "s/description = \"A minimal template for building web applications with Go, HTMX, and Templ templates\";/description = \"$APP_NAME - Built with Go, HTMX, and Templ templates\";/" flake.nix
+    # Only update homepage if it's a remote repository (contains dots)
+    if [[ "$MODULE_PATH" == *"."* ]]; then
+        sed -i "s|homepage = \"https://github.com/example/htmx-gotempl-template\";|homepage = \"https://$MODULE_PATH\";|" flake.nix
+    fi
+fi
 
-# 6. Clean up and regenerate
+# 6. Clean up and regenerate templates
 print_info "Cleaning up and regenerating templates..."
 if command -v make >/dev/null 2>&1; then
     make clean >/dev/null 2>&1 || true
@@ -179,11 +197,13 @@ rm -f "$0"
 
 print_success "Project setup completed successfully!"
 echo ""
-print_info "Next steps:"
-echo "  1. Initialize git repository: git init"
-echo "  2. Add remote origin: git remote add origin https://github.com/$REPO_USER/$REPO_NAME.git"
-echo "  3. Make initial commit: git add . && git commit -m 'Initial commit'"
-echo "  4. Push to repository: git push -u origin main"
+print_info "Project '$APP_NAME' has been configured with module '$MODULE_PATH'"
+echo ""
+print_info "Files updated:"
+echo "  ✓ Go module and import paths"
+echo "  ✓ Makefile - Updated app name"  
+echo "  ✓ .gitignore - Updated binary name"
+echo "  ✓ flake.nix - Updated description and homepage"
 echo ""
 print_info "Development commands:"
 echo "  - Start development server: make run"
