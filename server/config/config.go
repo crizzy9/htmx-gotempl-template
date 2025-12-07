@@ -7,7 +7,8 @@ import (
 
 // Config holds all application configuration
 type Config struct {
-	Server ServerConfig
+	Server   ServerConfig
+	Database DatabaseConfig
 }
 
 // ServerConfig holds server-related configuration
@@ -16,12 +17,30 @@ type ServerConfig struct {
 	Host string
 }
 
+// DatabaseConfig holds database-related configuration
+type DatabaseConfig struct {
+	Host     string
+	Port     int
+	User     string
+	Password string
+	Name     string
+	SSLMode  string
+}
+
 // LoadConfig loads configuration from environment variables or defaults
 func LoadConfig() *Config {
 	cfg := &Config{
 		Server: ServerConfig{
 			Port: getEnvAsInt("APP_PORT", 8080),
 			Host: getEnvAsString("APP_HOST", "0.0.0.0"),
+		},
+		Database: DatabaseConfig{
+			Host:     getEnvAsString("DB_HOST", "localhost"),
+			Port:     getEnvAsInt("DB_PORT", 5432),
+			User:     getEnvAsString("DB_USER", "postgres"),
+			Password: getEnvAsString("DB_PASSWORD", "postgres"),
+			Name:     getEnvAsString("DB_NAME", "myapp_db"),
+			SSLMode:  getEnvAsString("DB_SSLMODE", "disable"),
 		},
 	}
 

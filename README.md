@@ -5,12 +5,14 @@ A minimal template for building web applications with Go, HTMX, and Templ templa
 ## Features
 
 - **Go HTTP Server**: Standard Go HTTP server with clean routing
+- **PostgreSQL Database**: Full PostgreSQL integration with migrations
 - **HTMX Integration**: Dynamic content loading without JavaScript
 - **Templ Templates**: Type-safe HTML templates in Go
 - **Tailwind CSS**: Utility-first CSS framework
 - **Environment Config**: Configuration via environment variables
-- **Docker Support**: Multi-stage build with health checks
-- **Development Tools**: Makefile with common tasks
+- **Docker Support**: Multi-stage build with health checks and PostgreSQL
+- **Database Migrations**: Automated schema migrations with sample data
+- **Development Tools**: Makefile with database management tasks
 
 ## Template Setup
 
@@ -74,14 +76,21 @@ make clean && make templ-generate && go mod tidy
    ```bash
    go mod tidy
    go install github.com/a-h/templ/cmd/templ@latest
+   # Optional: Install migrate CLI for manual migration management
+   go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
    ```
 
-3. **Run the application**:
+3. **Start the database**:
+   ```bash
+   make db-up
+   ```
+
+4. **Run the application**:
    ```bash
    make run
    ```
 
-4. **Visit**: http://localhost:8080
+5. **Visit**: http://localhost:8080
 
 ### Option 2: Docker
 
@@ -301,15 +310,19 @@ sudo nixos-rebuild switch --flake .#myserver
 ├── server/
 │   ├── api/           # HTTP handlers
 │   ├── config/        # Configuration management
+│   ├── database/      # Database connection and migrations
+│   ├── models/        # Database models and structs
+│   ├── services/      # Database service layer
 │   ├── templates/     # Templ template files (.templ)
 │   └── main.go        # Application entry point
+├── migrations/        # Database migration files
 ├── web/
 │   └── static/
 │       └── css/       # Static CSS files
 ├── go.mod             # Go module file
 ├── Makefile          # Build and run commands
 ├── Dockerfile        # Docker build configuration
-├── docker-compose.yml # Docker services configuration  
+├── docker-compose.yml # Docker services configuration with PostgreSQL
 ├── .dockerignore     # Docker ignore patterns
 ├── flake.nix         # Nix flake with NixOS module
 ├── flake.lock        # Nix flake lock file
@@ -328,8 +341,14 @@ sudo nixos-rebuild switch --flake .#myserver
 
 ### Docker Commands
 - `make docker-build` - Build the Docker image
-- `make docker-run` - Run the application in Docker
+- `make docker-run` - Run the application in Docker (with PostgreSQL)
 - `make docker-stop` - Stop the Docker container
+
+### Database Commands
+- `make db-up` - Start PostgreSQL database only
+- `make db-down` - Stop PostgreSQL database
+- `make db-reset` - Reset database (removes all data)
+- `make db-migrate` - Run database migrations manually
 
 ### Nix Commands
 - `nix develop` - Enter development shell with all dependencies
@@ -351,8 +370,15 @@ Set these in your environment, Docker Compose, or NixOS configuration:
 APP_PORT=8080          # Server port (default: 8080)
 APP_HOST=0.0.0.0      # Server host (default: 0.0.0.0)
 
+# Database configuration
+DB_HOST=localhost      # Database host (default: localhost)
+DB_PORT=5432          # Database port (default: 5432)
+DB_USER=postgres      # Database user (default: postgres)
+DB_PASSWORD=postgres  # Database password (default: postgres)
+DB_NAME=myapp_db      # Database name (default: myapp_db)
+DB_SSLMODE=disable    # SSL mode (default: disable)
+
 # Add your own environment variables in server/config/config.go
-DATABASE_URL=postgres://user:pass@localhost/myapp
 API_KEY=your-secret-key
 ```
 
@@ -408,6 +434,75 @@ Set these environment variables to customize the application:
 2. **Make changes**: Edit your code as needed
 3. **Build package**: `nix build`
 4. **Test service**: `nix run` or build and deploy to test system
+
+## Database Setup
+
+The template includes a complete PostgreSQL setup with sample data and API endpoints.
+
+### Database Schema
+
+The included migrations create three main tables:
+- **users** - User accounts with email and name
+- **posts** - Blog posts with title, content, and publish status
+- **comments** - Comments linked to posts and users
+
+### Sample API Endpoints
+
+The template includes the following REST API endpoints:
+
+#### Users
+- `GET /api/users` - List all users
+- `POST /api/users/create` - Create a new user
+- `GET /api/users/{id}` - Get user by ID
+- `DELETE /api/users/{id}` - Delete user
+
+#### Posts
+- `GET /api/posts` - List all published posts
+- `POST /api/posts/create` - Create a new post (starts as draft)
+- `GET /api/posts/{id}` - Get post by ID
+- `POST /api/posts/{id}` - Publish post (with action=publish)
+
+### Testing the API
+
+Once the application is running, you can test the endpoints:
+
+```bash
+# Get all users
+curl http://localhost:8080/api/users
+
+# Create a new user
+curl -X POST http://localhost:8080/api/users/create \
+  -d "email=test@example.com&name=Test User"
+
+# Get all published posts
+curl http://localhost:8080/api/posts
+
+# Create a new post
+curl -X POST http://localhost:8080/api/posts/create \
+  -d "title=My New Post&content=This is the content&user_id=1"
+
+# Publish a post
+curl -X POST http://localhost:8080/api/posts/1 \
+  -d "action=publish"
+```
+
+### Database Management
+
+The template includes several database management commands:
+
+```bash
+# Start database only (for local development)
+make db-up
+
+# Reset database (removes all data and recreates schema)
+make db-reset
+
+# Run migrations manually (requires migrate CLI)
+make db-migrate
+
+# Stop database
+make db-down
+```
 
 ## HTMX Integration
 

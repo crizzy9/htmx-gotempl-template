@@ -1,6 +1,7 @@
 # AI Agents Development Guide
 
 This document provides context for AI development assistants working on this HTMX + Go + Templ application.
+This is a template repository used for a quick startup of repositories
 
 ## Project Architecture
 
